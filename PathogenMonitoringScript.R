@@ -15,3 +15,7 @@ provs<-c("aci_2019_bc.tif", "aci_2019_ab.tif", "aci_2019_sk.tif", "aci_2019_mb.t
 provsRast<-lapply(provs, raster) #applying raster function to list of provinces
 CanadaAll<- do.call(merge, provsRast) #merge all provincial rasters
 writeRaster(CanadaAll, "CanadaAllRasters.tif") #writing a raster file for all Ag data in Canada
+
+#reclassify crop classes as pollinated by managed crops or not
+reclass<-read.csv("CropReclassify.csv") #file to reclassify crop data as pollinated by managed bees
+newCanada<-reclassify(CanadaAll, reclass, filename="reclassed.tif") #reclassifies the crop classifications as 1 (for pollinated by managed bees) or 2 (for not pollinated by managed bees)
