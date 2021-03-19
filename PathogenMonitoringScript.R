@@ -7,6 +7,7 @@ library(rgdal) #for spTransform
 ##datafiles
 CanadaReclass<-raster("reclassed.tif")
 poly<-shapefile("CanadaPolygon.shp")
+Crop9k<-raster("CanadaLowRes.tif")
 
 ##data prep
 
@@ -42,3 +43,20 @@ plot(poly, add=T)
 crop100<-raster::aggregate(CanadaReclass, fact=30) #900 x 900 m resolution, still speckled 
 crop10k<-raster::aggregate(crop100, fact=10) #9000 x 9000 resolution
 writeRaster(crop10k, "CanadaLowRes.tif")
+
+#making heat map like plot
+library(mapview)
+library(colorspace)
+Crop9k[Crop9k<=1]<-NA #setting values less than or equal to 1 to NA, these have no managed bees
+pal<-sequential_hcl(8, "SunsetDark", rev=TRUE) #gets colour ramp, want the first colour to be transparent
+mapview(Crop9k, col=pal, na.alpha=100)
+
+map1<-mapview(Crop9k, col=pal, na.color="#FFFFFF00")  #Crop9kmapview file
+
+#add an overlay of 30% bumble bee distribution conserved for current climate
+BBPA<-raster("s2aMinSet30.tif")
+BBPA2<-projectRaster(BBPA, Crop9k)
+BBPA2[BBPA2<0.8]<-NA
+pal2<-sequential_hcl(2, "Grays", rev=TRUE)
+
+map2<-mapview(Crop9k, col=pal, na.color="#FFFFFF00") + mapview (BBPA2, col=pal2, alpha.regions=0.5, legend=FALSE, na.color="#FFFFFF00")
