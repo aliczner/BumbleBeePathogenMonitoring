@@ -56,18 +56,16 @@ quantile(HoneyBeeNoZero$VALUE) #level 1 = up to 56, level 2 = 180, level 3 = 891
 HoneyBeeData3 <- HoneyBeeData2 %>% mutate(new_bin = cut(VALUE, breaks=c(0, 1, 56, 180, 891,50000)-1)) %>% 
 mutate(new_bin = as.numeric(new_bin)-1)
   
-HoneyBeeData3$new_bin <- as.numeric(as.factor(HoneyBeeData3$new_bin)) 
-
 #other bee data
 OtherBeeData2 <- OtherBeeData 
 OtherBeeData2[is.na(OtherBeeData2) | OtherBeeData2 < 0] <- 0
+quantile(OtherBeeData2$VALUE)
 #trying to make levels for amount of Other bees, but there are lots of zeros and high values
 #one bin will be zero for sure so look at data without zeros
 OtherBeeNoZero <- subset(OtherBeeData2, VALUE >0)
-quantile(OtherBeeNoZero$VALUE) #level 1 = up to 34, level 2 = 159, level 3 = 948, level 4 >948
-OtherBeeData3 <- OtherBeeData2 %>% mutate(new_bin = cut(VALUE, breaks=c(0, 34, 159, 948), 
-                                                        include.lowest=T))
-OtherBeeData3$new_bin <- as.numeric(as.factor(OtherBeeData3$new_bin)) 
+quantile(OtherBeeNoZero$VALUE) #level 1 = up to 4, level 2 = 9, level 3 = 1265, level 4 >68123
+OtherBeeData3 <- OtherBeeData2 %>% mutate(new_bin = cut(VALUE, breaks=c(0, 1, 4, 9, 1265 ,70000)-1)) %>% 
+  mutate(new_bin = as.numeric(new_bin)-1)
 
 ##  attaching managed bee data to ag census polygons
 
@@ -107,18 +105,81 @@ Crops5K <- raster("crops5km.tif")
 # first make plots of each risk layer individually for possible figures in the paper
 HoneyBeeLayer.df <- as.data.frame(HoneyBeeLayer, xy=T) %>%  #ggplot2 needs raster as dataframe
   na.omit()
+polyCAN <- getData("GADM", country = "CAN", level = 1)
+agspots <- extent(HoneyBeeLayer)
+polyCAN2 <- crop(polyCAN, agspots)
+polyCAN.sf <-sf::st_as_sf(polyCAN2)
+
 library(ggplot2)
 hbmap <- ggplot(data=HoneyBeeLayer.df) +
-  geom_raster(aes(x=x, y=y, fill = HoneyBeeLayer)) +
-  scale_fill_viridis_c(option = "inferno", direction = -1) +
-  theme_minimal() 
+  geom_raster(aes(x=x, y=y, fill = layer)) +
+  geom_sf(data=polyCAN.sf, fill=NA) +
+  scale_fill_viridis_c(option = "inferno", direction = -1,
+                       name = "Honey bee\nrisk level") +
+  scale_x_continuous(name="")+
+  scale_y_continuous(name="") +
+  theme_minimal()+
+  theme(legend.title=element_text(size=14),
+                legend.text=element_text(size=12),
+        axis.text.x=element_text(size=11),
+        axis.text.y=element_text(size=11))
 hbmap
 
+OtherBeeLayer.df <- as.data.frame(OtherBeeLayer, xy=T) %>%  #ggplot2 needs raster as dataframe
+  na.omit()
+obmap <- ggplot(data=OtherBeeLayer.df) +
+  geom_raster(aes(x=x, y=y, fill = layer)) +
+  geom_sf(data=polyCAN.sf, fill=NA) +
+  scale_fill_viridis_c(option = "inferno", direction = -1,
+                       name = "Other bee\nrisk level") +
+  scale_x_continuous(name="")+
+  scale_y_continuous(name="") +
+  theme_minimal()+
+  theme(legend.title=element_text(size=14),
+        legend.text=element_text(size=12),
+        axis.text.x=element_text(size=11),
+        axis.text.y=element_text(size=11))
+obmap
 
-Crops5K<-projectRaster(Crops5K, HoneyBeeLayer)
-totalrisk <- (HoneyBeeLayer + OtherBeeLayer + Crops5K) #summing risk
+Crops5K2 <- projectRaster(Crops5K, HoneyBeeLayer, method = "ngb")
+Crops5K.df2 <- as.data.frame(Crops5K2, xy=T) %>%  #ggplot2 needs raster as dataframe
+  na.omit()
+cmap <- ggplot(data=Crops5K.df2) +
+  geom_raster(aes(x=x, y=y, fill = as.factor(crops5km))) +
+  geom_sf(data=polyCAN.sf, fill=NA) +
+  scale_fill_manual(values=c("#FFFFFF00", "#000004"),
+                       name = "Pollinated crop\nrisk level") +
+  scale_x_continuous(name="")+
+  scale_y_continuous(name="") +
+  theme_minimal()+
+  theme(legend.title=element_text(size=14),
+        legend.text=element_text(size=12),
+        axis.text.x=element_text(size=11),
+        axis.text.y=element_text(size=11))
+cmap
+
+totalrisk <- (HoneyBeeLayer + OtherBeeLayer + Crops5K2) #summing risk
+
+totalrisk.df <- as.data.frame(totalrisk, xy=T) %>%  #ggplot2 needs raster as dataframe
+  na.omit()
+tmap <- ggplot(data=totalrisk.df) +
+  geom_raster(aes(x=x, y=y, fill = as.factor(layer))) +
+  geom_sf(data=polyCAN.sf, fill=NA) +
+  scale_fill_viridis_d(option = "inferno", direction = -1,
+                       name = "total\nrisk level",
+                       breaks=c("9","8","7","6","5","4","3","2","1","0")) +
+  scale_x_continuous(name="")+
+  scale_y_continuous(name="") +
+  theme_minimal()+
+  theme(legend.title=element_text(size=14),
+        legend.text=element_text(size=12),
+        axis.text.x=element_text(size=11),
+        axis.text.y=element_text(size=11))
+tmap
+
 
 library(dplyr)
+
 
 
 #split longitude -95.16 
