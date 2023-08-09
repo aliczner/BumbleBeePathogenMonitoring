@@ -3,13 +3,22 @@
 ##libraries
 library(raster)
 library(rgdal) #for spTransform
+library(prioritizr)
+library(gurobi)
+library(dplyr)
 
-##datafiles
+####datafiles
 CanadaReclass<-raster("reclassed.tif")
 poly<-shapefile("CanadaPolygon.shp")
 Crop9k<-raster("CanadaLowRes.tif")
+speciesstack<-stack("speciesstack.tif")
+canada <- raster("CanadaPolyRaster5km.grd") # cost file
+canada[canada > 0] <- 1 # set cost of each pixel to be 1
+CPA<-raster("CPA30.tif")
 
-##data prep
+########
+###dataset prep
+########
 
 #Need to merge individual rasters from the Canada Agricultural Resource Inventory together. Currently separated by province
 provs<-c("aci_2019_bc.tif", "aci_2019_ab.tif", "aci_2019_sk.tif", "aci_2019_mb.tif", "aci_2019_on.tif",
@@ -32,8 +41,11 @@ shapefile(CanadaPoly, filename="CanadaPolygon.shp") #wriitng Canada polygon shap
 polynew<-spTransform(poly, crs(CanadaReclass))
 shapefile(polynew, filename="CanadaPolygon.shp", overwrite=TRUE)
 
+)
 
+##########
 ## Making plots
+##########
 
 #raw plot of where the managed crops are
 plot(CanadaReclass, col=c("#FFFFFFFF", "#533A71"), breaks=c(0,1,2), legend=FALSE)
