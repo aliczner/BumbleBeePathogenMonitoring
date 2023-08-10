@@ -112,15 +112,16 @@ polyCAN.sf <-sf::st_as_sf(polyCAN2)
 
 library(ggplot2)
 hbmap <- ggplot(data=HoneyBeeLayer.df) +
-  geom_raster(aes(x=x, y=y, fill = layer)) +
+  geom_raster(aes(x=x, y=y, fill = as.factor(layer))) +
   geom_sf(data=polyCAN.sf, fill=NA) +
-  scale_fill_viridis_c(option = "inferno", direction = -1,
+  scale_fill_manual(values=c("#FFFFFF", "#fcffa4", "#ed6925", "#781c6d", "#000004"),
                        name = "Honey bee\nrisk level") +
   scale_x_continuous(name="")+
   scale_y_continuous(name="") +
   theme_minimal()+
   theme(legend.title=element_text(size=14),
                 legend.text=element_text(size=12),
+        legend.key = element_rect(colour = "black"),
         axis.text.x=element_text(size=11),
         axis.text.y=element_text(size=11))
 hbmap
@@ -128,15 +129,16 @@ hbmap
 OtherBeeLayer.df <- as.data.frame(OtherBeeLayer, xy=T) %>%  #ggplot2 needs raster as dataframe
   na.omit()
 obmap <- ggplot(data=OtherBeeLayer.df) +
-  geom_raster(aes(x=x, y=y, fill = layer)) +
+  geom_raster(aes(x=x, y=y, fill = as.factor(layer))) +
   geom_sf(data=polyCAN.sf, fill=NA) +
-  scale_fill_viridis_c(option = "inferno", direction = -1,
+  scale_fill_manual(values=c("#FFFFFF", "#fcffa4", "#ed6925", "#781c6d", "#000004"),
                        name = "Other bee\nrisk level") +
   scale_x_continuous(name="")+
   scale_y_continuous(name="") +
   theme_minimal()+
   theme(legend.title=element_text(size=14),
         legend.text=element_text(size=12),
+        legend.key = element_rect(colour = "black"),
         axis.text.x=element_text(size=11),
         axis.text.y=element_text(size=11))
 obmap
@@ -154,6 +156,7 @@ cmap <- ggplot(data=Crops5K.df2) +
   theme_minimal()+
   theme(legend.title=element_text(size=14),
         legend.text=element_text(size=12),
+        legend.key = element_rect(colour = "black"),
         axis.text.x=element_text(size=11),
         axis.text.y=element_text(size=11))
 cmap
@@ -165,7 +168,8 @@ totalrisk.df <- as.data.frame(totalrisk, xy=T) %>%  #ggplot2 needs raster as dat
 tmap <- ggplot(data=totalrisk.df) +
   geom_raster(aes(x=x, y=y, fill = as.factor(layer))) +
   geom_sf(data=polyCAN.sf, fill=NA) +
-  scale_fill_viridis_d(option = "inferno", direction = -1,
+  scale_fill_manual(values = c("#000004", "#210c4a", "#57106e", "#8a226a", "#bc3754",
+                              "#e45a31", "#f98e09", "#f9cb35", "#fcffa4", "#ffffff"),
                        name = "total\nrisk level",
                        breaks=c("9","8","7","6","5","4","3","2","1","0")) +
   scale_x_continuous(name="")+
@@ -173,12 +177,72 @@ tmap <- ggplot(data=totalrisk.df) +
   theme_minimal()+
   theme(legend.title=element_text(size=14),
         legend.text=element_text(size=12),
+        legend.key = element_rect(colour = "black"),
         axis.text.x=element_text(size=11),
         axis.text.y=element_text(size=11))
 tmap
 
+###   total risk map with 30% current climate bb priority area
+## this map will be similar to total risk, treating CPA another "risk"
+## the next map will have the CPAs plotted ontop of the risk map if I can make it work
 
-library(dplyr)
+CPA <- raster("CPA30.tif")
+
+totalriskCPA <- (HoneyBeeLayer + OtherBeeLayer + Crops5K2 + CPA)
+
+totalriskCPA.df <- as.data.frame(totalriskCPA, xy=T) %>% 
+  na.omit()
+trmap <- ggplot(data=totalriskCPA.df) +
+  geom_raster(aes(x=x, y=y, fill = as.factor(layer))) +
+  geom_sf(data=polyCAN.sf, fill=NA) +
+  scale_fill_manual(values = c("#000004", "#1b0c41", "#4a0c6b", "#781c6d", "#a52c60",
+                               "#cf4446", "#ed6925", "#fb9b06", "#f7d13d", "#fcffa4", 
+                               "#ffffff"),
+                    name = "total risk\nwith CPA",
+                    breaks=c("10","9","8","7","6","5","4","3","2","1","0")) +
+  scale_x_continuous(name="")+
+  scale_y_continuous(name="") +
+  theme_minimal()+
+  theme(legend.title=element_text(size=14),
+        legend.text=element_text(size=12),
+        legend.key = element_rect(colour = "black"),
+        axis.text.x=element_text(size=11),
+        axis.text.y=element_text(size=11))
+trmap
+
+# map of bee and crop risk with CPA plotted on top
+
+totalrisk <- (HoneyBeeLayer + OtherBeeLayer + Crops5K2) #summing risk
+
+totalrisk.df <- as.data.frame(totalrisk, xy=T) %>%  #ggplot2 needs raster as dataframe
+  na.omit()
+#CPA has an attribute table that was put into df instead of values
+CPAtest <- setValues(raster(CPA), CPA[])#this removes the attribute table
+CPA.df <- as.data.frame(CPAtest, xy=T) %>% 
+  na.omit()
+CPA.df$layer[CPA.df$layer == 1] <- 12 #priority area = 12
+CPA.df$layer[CPA.df$layer == 0] <- 11 #not priority area = 11
+
+
+lastmap <- tmap +
+  geom_raster(data=CPA.df, aes(x=x, y=y, fill = as.factor(layer))) +
+  scale_fill_manual(values = c("#1f9e8970", "#00000400",
+                               "#000004", "#210c4a", "#57106e", "#8a226a", "#bc3754",
+                              "#e45a31", "#f98e09", "#f9cb35", "#fcffa4", "#ffffff"),
+                                breaks=c("12", "11",
+                                  "9","8","7","6","5","4","3","2","1","0")) +
+  scale_x_continuous(name="") +
+  scale_y_continuous(name="") +
+  theme_minimal()+
+  theme(legend.title=element_text(size=14),
+        legend.text=element_text(size=12),
+        legend.key = element_rect(colour = "black"),
+        axis.text.x=element_text(size=11),
+        axis.text.y=element_text(size=11))
+lastmap
+
+
+
 
 
 
