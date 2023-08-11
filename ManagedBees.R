@@ -242,39 +242,6 @@ lastmap <- tmap +
 lastmap
 
 
-
-
-
-
-#split longitude -95.16 
-totalrisk<-raster("totalrisk.tif")
-eastrisk<-crop(totalrisk, extent(-95.16, -52.625, 41.66667, 83.125))
-westrisk<-crop(totalrisk, extent(-141, -95.16, 41.66667, 83.125))
-
-writeRaster(eastrisk, "easkrisk.tif")
-writeRaster(westrisk, "westrisk.tif")
-
-#####
-###Make plot with conservation priority areas
-#####
-
-#total risk plot
-totalrisk[totalrisk==0]<-NA
-plot(CPA, legend=F, xlim=c(-150,-50), col = c("#E4E1DD", "#6E7DAB"))
-col <- hcl.colors(5000, "Inferno", rev=T, alpha=0.85)
-col[1] <- "NA"
-plot(totalrisk, add=T, xlim=c(-150,-50), col=col)
-
-#Eastern Canada plot
-pdf("eastrisk.pdf", width=9, height=12)
-eastrisk[eastrisk==0]<-NA
-plot(CPA, legend=F, xlim=c(-96,-50), col = c("#E4E1DD", "#517664"))
-col <- hcl.colors(5000, "Inferno", rev=T, alpha=0.6)
-col[1] <- "NA"
-plot(eastrisk, add=T, xlim=c(-96,-50), col=col)
-devoff.()
-
-
 ############
 #Data analysis
 ############
@@ -294,11 +261,11 @@ write.csv(do.call(function(x)colSums(x, na.rm=T), landrisk), "landcoverriskCPA.c
 protected<-length(CPA[CPA==1]) #117869
 riskCPArast<-rasterize(riskCPApoly, CPA)
 overlap<-length(riskCPArast[riskCPArast>=1]) #27709
-overlap/protected #0.235083
+overlap/protected #0.1716
 
 #how much of the at-risk areas have CPAs?
 total<-length(totalrisk[totalrisk>=1]) #78563
-overlap/total #0.3526978
+overlap/total #0.2878
   
 #rank the worst CCS by province, by Canada
 censusrisk<-extract(totalrisk, CensusBounds)
@@ -346,8 +313,12 @@ library(ggplot2)
 ggplot(data=landdata2, aes(x=reorder(landcover, -pixelarea), y=pixelarea))+
   geom_bar(stat="identity",  color="black", position=position_dodge())  +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  xlab("Landcover Class")+ ylab("pixel area")+scale_y_continuous(expand=c(0,0))
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        axis.title.y = element_text(size = 14),
+        axis.text.y = element_text(size =12),
+        axis.text.x = element_text(size=12)) +
+  scale_y_continuous(name = "number of cells", expand=c(0,0)) +
+  scale_x_discrete(name = "", label = abbreviate)
 
 polyarea<-area(CensusBounds, na.rm=T)
 censusdata$area<-polyarea
