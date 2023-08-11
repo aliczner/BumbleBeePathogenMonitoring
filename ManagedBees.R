@@ -258,7 +258,7 @@ do.call(function(x)colSums(x, na.rm=T), landrisk)
 write.csv(do.call(function(x)colSums(x, na.rm=T), landrisk), "landcoverriskCPA.csv")
 
 #how much of the CPAs are within at-risk areas? 
-protected<-length(CPA[CPA==1]) #117869
+protected<-length(CPA[CPA==1]) #255130
 riskCPArast<-rasterize(riskCPApoly, CPA)
 overlap<-length(riskCPArast[riskCPArast>=1]) #27709
 overlap/protected #0.1716
